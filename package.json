@@ -12,6 +12,7 @@
   "dependencies": {
     "@vercel/blob": "^2.0.0",
     "express": "^5.2.1",
+    "formidable": "^3.5.4",
     "multer": "^2.0.2"
   }
 }

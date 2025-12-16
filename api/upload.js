@@ -1,4 +1,6 @@
 import { put } from '@vercel/blob';
+import formidable from 'formidable';
+import fs from 'fs';
 
 export const config = {
   api: {
@@ -7,12 +9,6 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  console.log('Headers:', req.headers);
-  console.log('Body type:', typeof req.body);
-  console.log('Body length:', req.body?.length);
-  console.log('Filename:', req.headers['x-filename']);
-  console.log('Secret:', req.headers['x-upload-secret']);
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -23,18 +19,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const file = req.body;
-    const filename = req.headers['x-filename'];
+    const form = formidable({
+      keepExtensions: true,
+      maxFileSize: 10 * 1024 * 1024,
+    });
 
-    if (!file || !filename) {
+    const [fields, files] = await form.parse(req);
+
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+
+    if (!file) {
       return res.status(400).json({ error: 'No file' });
     }
 
+    const fileBuffer = fs.readFileSync(file.filepath);
+    const filename = file.originalFilename || file.newFilename;
+
     const blob = await put(
       `images/${Date.now()}-${filename}`,
-      file,
+      fileBuffer,
       { access: 'public' }
     );
+
+    fs.unlinkSync(file.filepath);
 
     res.json({ url: blob.url });
   } catch (e) {
