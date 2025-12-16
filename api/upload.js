@@ -11,9 +11,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const secret = req.headers['x-upload-secret'];
+  if (secret !== process.env.UPLOAD_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   try {
     const file = req.body;
-
     const filename = req.headers['x-filename'];
 
     if (!file || !filename) {
