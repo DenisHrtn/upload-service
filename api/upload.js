@@ -7,6 +7,12 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  console.log('Headers:', req.headers);
+  console.log('Body type:', typeof req.body);
+  console.log('Body length:', req.body?.length);
+  console.log('Filename:', req.headers['x-filename']);
+  console.log('Secret:', req.headers['x-upload-secret']);
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
