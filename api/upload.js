@@ -1,6 +1,4 @@
 import { put } from '@vercel/blob';
-import formidable from 'formidable';
-import fs from 'fs';
 
 export const config = {
   api: {
@@ -26,29 +24,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('Creating formidable form...');
-    const form = formidable({
-      keepExtensions: true,
-      maxFileSize: 10 * 1024 * 1024,
-    });
+    const filename = req.headers['x-filename'];
 
-    console.log('Parsing form...');
-    const [fields, files] = await form.parse(req);
-
-    console.log('Fields:', fields);
-    console.log('Files:', Object.keys(files));
-    console.log('File object:', files.file);
-
-    const file = Array.isArray(files.file) ? files.file[0] : files.file;
-
-    if (!file) {
-      console.log('No file found');
-      return res.status(400).json({ error: 'No file' });
+    if (!filename) {
+      return res.status(400).json({ error: 'No filename' });
     }
 
-    console.log('File found:', file.originalFilename || file.newFilename);
-    const fileBuffer = fs.readFileSync(file.filepath);
-    const filename = file.originalFilename || file.newFilename;
+    console.log('Reading body as stream...');
+
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const fileBuffer = Buffer.concat(chunks);
+
+    console.log('File buffer length:', fileBuffer.length);
+    console.log('Filename:', filename);
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return res.status(400).json({ error: 'No file data' });
+    }
 
     console.log('Uploading to Vercel Blob...');
     const blob = await put(
@@ -57,9 +52,7 @@ export default async function handler(req, res) {
       { access: 'public' }
     );
 
-    fs.unlinkSync(file.filepath);
     console.log('Upload successful:', blob.url);
-
     res.json({ url: blob.url });
   } catch (e) {
     console.error('Error in handler:', e);
